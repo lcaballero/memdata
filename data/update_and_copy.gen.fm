@@ -1,0 +1,13 @@
+package {{ .GOPACKAGE }}
+{{ .GEN_TAGLINE }}
+
+
+func (dest *{{ .structName }}) FullUpdateDest(src {{ .structName }}) { {{ range .names }}
+  dest.{{ . }} = src.{{ . }}{{ end }}
+}
+
+func (src {{ .structName }}) Copy() {{ .structName }} {
+  dest := &{{ .structName }}{}
+  dest.FullUpdateDest(src)
+  return *dest
+}

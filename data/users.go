@@ -4,10 +4,21 @@ import (
 	"errors"
 )
 
+var BadCredentialsError = errors.New("Bad Credentials Error")
+
 type Users []User
 
 func NewUsers(users ...User) Users {
 	return users
+}
+
+func (users Users) FindByAuth(username, password string) (User, error) {
+	for _, u := range users {
+		if u.Password == password && u.Username == username {
+			return u, nil
+		}
+	}
+	return User{}, BadCredentialsError
 }
 
 func (users Users) FindUser(id string) (User, error) {

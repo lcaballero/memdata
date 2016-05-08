@@ -1,7 +1,8 @@
-package da
+package data
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -31,16 +32,30 @@ func NewDataStore(
 	forNew DataProvider,
 	forExisting DataProvider) (*Locker, error) {
 
+	var locker *Locker = nil
 	_, err := os.Stat(dbname)
 	if os.IsNotExist(err) {
-		return &Locker{
+		fmt.Println("creating new data store")
+		locker = &Locker{
 			filename: dbname,
 			lock:     &sync.Mutex{},
 			data:     forNew(),
-		}, nil
+			modified: true,
+		}
 	} else {
-		return LoadFromFile(dbname, forExisting())
+		fmt.Println("reloading existing data store")
+		locker, err = LoadFromFile(dbname, forExisting())
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	_, err = locker.Flush()
+	if err != nil {
+		return nil, err
+	}
+
+	return locker, nil
 }
 
 // LoadFromFile loads the db from the given file and populates the data
@@ -73,10 +88,9 @@ func (d *Locker) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
+// Flush writes data to file and returns true if the Flush wrote to disk,
+// if an I/O error occurs it will return false and the error.
 func (d *Locker) Flush() (bool, error) {
-	if !d.modified {
-		return false, nil
-	}
 	log.Printf("Flushing data to file: %s\n", d.filename)
 	file, err := os.Create(d.filename)
 	if err != nil {
@@ -113,8 +127,12 @@ func (d *Locker) Start() hitman.KillChannel {
 				return
 
 			case <-writeTic:
-				log.Println("Flushing to disk")
-				d.Flush()
+				// log.Println("Flushing to disk")
+				isWritten, err := d.Flush()
+				d.modified = !isWritten
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
 	}()
@@ -127,5 +145,7 @@ func (d *Locker) Start() hitman.KillChannel {
 func (d *Locker) DataStore(fn Access) {
 	defer d.lock.Unlock()
 	d.lock.Lock()
-	d.modified = fn(d.data)
+	if fn(d.data) {
+		d.modified = true
+	}
 }

@@ -1,14 +1,16 @@
 package data
 
 type Data struct {
-	Users Users
-	Items []Item
+	Users   Users
+	Items   Items
+	Session Session
 }
 
 func NewData() *Data {
 	return &Data{
-		Users: make([]User, 0),
-		Items: make([]Item, 0),
+		Users:   make([]User, 0),
+		Items:   make([]Item, 0),
+		Session: make(Session),
 	}
 }
 func (d *Data) Add(u User) *Data {

@@ -2,28 +2,37 @@ package data
 
 import (
 	"time"
-
-	"code.google.com/p/go-uuid/uuid"
 )
 
+//go:generate genfront fields --output item.gen.go --template update_and_copy.gen.fm --line $GOLINE
 type Item struct {
-	Id           string
-	CreatedOn    time.Time
+	Id        string
+	GroupId   string
+	CreatedOn time.Time
+	CreatedBy string
+	UpdatedOn time.Time
+	UpdatedBy string
+
+	Url          string
 	Title        string
-	Summary      string
-	OwnersId     string
+	Description  string
+	Tags         []string
+	FavoritedBy  []string
+	Position     int
+	Security     int // Unix like privacy
 	ItemState    ItemState
 	RecordStatus RecordStatus
-	Position     int
 }
 
 // NewItem provides an item with a new ID and with CreatedOn as Now().
 // The Item's ItemState and RecordStatus are both set to defaults of
 // Inception and Active (respectively).
-func NewItem() Item {
+func NewItem(creatorId string) Item {
+	now := time.Now()
 	return Item{
-		Id:           uuid.New(),
-		CreatedOn:    time.Now(),
+		Id:           creatorId,
+		CreatedOn:    now,
+		UpdatedOn:    now,
 		ItemState:    Inception,
 		RecordStatus: Active,
 	}
@@ -31,25 +40,5 @@ func NewItem() Item {
 
 // IsValid return true if the Item has an ID and a title, else false.
 func (e Item) IsValid() bool {
-	return e.Id != "" && e.Title != ""
-}
-
-// Update copies all fields from b (the source) to the receiver
-// (the dest).
-func (e *Item) Update(b Item) {
-	e.Id = b.Id
-	e.CreatedOn = b.CreatedOn
-	e.Title = b.Title
-	e.Summary = b.Summary
-	e.OwnersId = b.OwnersId
-	e.ItemState = b.ItemState
-	e.RecordStatus = b.RecordStatus
-	e.Position = b.Position
-}
-
-// Copy provides a new value with fields from the receiver.
-func (e Item) Copy() Item {
-	a := Item{}
-	a.Update(e)
-	return a
+	return e.Id != "" && !e.UpdatedOn.IsZero() && !e.CreatedOn.IsZero()
 }
